@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset = "utf-8">
+    <meta name = "template" content = "width=device_width">
+    <title>Goonsquadv2</title>
+
+    <style>
+      *{margin:0; padding:0;}
+
+      html, body {height:100%; width:100%; align-content:space-around;
+                  background-color: #202830; color:#ffffff; display: grid;
+                justify-content:center;}
+
+
+    </style>
+
+  </head>
+
+  <body>
+      <canvas></canvas>
+
+      <script type = "text/javascript">
+      //REMEMBER!!! core of any video game is this list, for every game loop:
+      //1. get input from user
+      //2. evaluate input
+      //3. display changes
+
+        //global vars can go here, this is the canvas that we write everything to
+        var context = document.querySelector("canvas").getContext("2d");
+        context.canvas.height = 640;
+        context.canvas.width = 640;
+        //if you comment this out, sprite images look like shit
+        context.imageSmoothingEnabled = false;
+        context.canvas.font = "30px Arial";
+
+
+        //TILEMAP VARS AND FUNCTIONS
+        var scaled_size = 64;
+        var sprite_size = 16;
+
+
+        //PLAYER OBJECT
+        var player = {
+          height:scaled_size,
+          width:scaled_size,
+          jumping:true,
+          x:70,
+          oldx:70,
+          x_velocity:0,
+          y:600,
+          oldy:600,
+          y_velocity:0,
+
+          drawPlayer:function(x, y){
+            context.drawImage(tile_sheet,sprite_size*4,0,sprite_size,sprite_size,x,y,scaled_size,scaled_size);
+
+          }
+        };
+        //CONTROLLER VARS AND FUNCTIONS
+        var controller = {
+          left:false,
+          right:false,
+          up:false,
+            //defines a listener for the keys that performs a custom event when the
+            //listener is triggered
+            keyListener:function(event){
+              //this var sets the key state to either 1: pushing a key or 2: not pushing a key
+              var key_state = (event.type == "keydown")?true:false;
+
+              switch(event.keyCode){
+                case 65: //left arrow key
+                  controller.left = key_state;
+                break;
+                case 87: //up arrow key
+                  controller.up = key_state;
+                break;
+                case 68: //right arrow key
+                  controller.right = key_state;
+                break;
+              }
+
+            }
+        };
+
+        //TILEMAP OBJECT
+        var tilemap = {
+          rows: 10,
+          columns:10,
+
+          map:[3,3,3,3,3,3,3,3,3,3,
+                   3,1,0,0,0,0,0,0,0,3,
+                   3,3,3,0,0,0,0,0,0,3,
+                   3,0,0,3,0,0,0,0,0,3,
+                   3,0,0,0,3,0,0,0,0,3,
+                   3,0,0,0,0,0,0,0,0,3,
+                   3,0,0,0,0,0,0,3,3,3,
+                   3,0,0,0,3,3,0,0,0,3,
+                   3,0,0,3,0,0,0,0,0,3,
+                   3,0,0,0,0,0,0,0,3,3]
+        };
+
+        //GENERIC COLLISION FUNCTION THAT I LOVE. Takes input of two objects and
+        //returns true if they are touching
+        collision = function(ax,ay,aw,ah,bx,by,bw,bh){
+            if(ax < bx+bw && ay < by+bh && bx < ax+aw && by < ay+ah){
+              return true;
+            }
+            else {
+              return false;
+            }
+        };
+
+        function loop(){
+          var height = context.canvas.height;
+          var width = context.canvas.width;
+
+
+
+          //draw background, make the resolution based off of the browser window
+          context.fillStyle = "#2e4263";
+          context.fillRect(0,0,width,height);
+
+          //TILEMAP BACKGROUND
+          for(let x = 0; x <tilemap.columns; x++){
+            for(let y=0; y<tilemap.rows; y++){
+              //gets the array position of the current tile to write
+              let value = tilemap.map[y*tilemap.columns +x];
+              let tilex = x*scaled_size;
+              let tiley = y*scaled_size;
+
+              context.drawImage(tile_sheet, sprite_size*value,0,sprite_size,sprite_size,
+                tilex,tiley,scaled_size,scaled_size);
+            }
+          }
+
+
+
+          //now that we have background, lets write our stupid terrible sprite to it
+          //how to draw from tilemap: https://www.w3schools.com/tags/canvas_drawimage.asp
+          //Clip the image and position the clipped part on the canvas:
+          //context.drawImage(img,sx,sy,swidth,sheight,x,y,width,height);
+          //this is how to draw the player, statically, who is at array position 4 in spritesheet
+          //context.drawImage(tile_sheet,sprite_size*4,0,sprite_size,sprite_size,canvas_x0,canvas_y0,scaled_size,scaled_size);
+
+          //after initializing everything, allow for input from user via listeners
+          if(controller.up && player.jumping == false){
+            player.y_velocity -= 40;
+            player.jumping = true;
+          }
+
+          if(controller.left){
+            player.x_velocity -= 0.8;
+          }
+
+          if(controller.right){
+            player.x_velocity += 0.8;
+          }
+
+
+          //PHYSICS!!!!!
+          player.y_velocity += 1.5; //gravity always add velocity each iteration (increase in v = gain in a)
+          player.y += player.y_velocity; //change y position based on velocity calced up to here
+          player.x += player.x_velocity;
+
+          player.x_velocity *= 0.9;
+          player.y_velocity *= 0.9; //friction, makes sense in x... not in y...
+
+          //TODO add tilebased collision
+          //ok, so based on x,y position of player, grab all tiles around him
+          //figure out if the player is going to be in a wall and only move the
+          //player if it is a valid move, otherwise stop them
+          //how many tiles do we need to look at? 6 at most i think... could do 9
+          //just to be sure
+          //first need to find which tile I am in
+          var playercellx = Math.floor(player.x/ scaled_size);
+          var playercelly = Math.floor(player.y/ scaled_size);
+          var tilenumb = tilemap.map[playercelly*tilemap.columns +playercellx];
+
+          var current_cell = "Cell: "+ playercellx + ", " + playercelly+
+          ", " +tilenumb;
+
+          if(player.y_velocity>0){
+            player.jumping = true;
+          }
+
+          //this almost works, stops you from going left through the bricks
+          if(player.x_velocity<0 && tilenumb!=0){
+            player.x = player.oldx;
+            player.y = player.oldy;
+            player.x_velocity = 0;
+          }
+          //if moving to the right, find tilenumb+1
+          var rtilenumb = tilemap.map[playercelly*tilemap.columns +playercellx+1];
+          if(player.x_velocity>0 && rtilenumb!=0){
+            player.x = player.oldx;
+            player.y = player.oldy;
+            player.x_velocity = 0;
+          }
+          //now do y direction. May need to wrap this around x
+          //for moving down
+          var btilenumb = tilemap.map[(playercelly+1)*tilemap.columns +playercellx];
+          if(player.jumping ==true && player.y_velocity>0 && btilenumb!=0){
+            player.jumping = false;
+            player.x = player.oldx;
+            player.y = player.oldy;
+            player.y_velocity =0;
+          }
+          //for moving up
+          var toptilenumb = tilemap.map[(playercelly-1)*tilemap.columns +playercellx];
+          if(player.y_velocity>0 && btilenumb!=0 && player.jumping){
+            player.x = player.oldx;
+            player.y = player.oldy;
+            player.y_velocity =0;
+          }
+
+          //add static collision detection for the floor
+          if(player.y + player.height > height){
+            player.jumping = false;
+            player.y =  height - player.height;
+            player.y_velocity = 0;
+          }
+
+
+          context.fillText(current_cell, scaled_size,scaled_size+10);
+
+
+          //draw the player at the end of the physics calculations
+          player.drawPlayer(player.x, player.y);
+          player.oldx = player.x;
+          player.oldy = player.y;
+          window.requestAnimationFrame(loop);
+        };
+
+        //initialize game loop and it will go forever since it calls itself
+        //dont call the loop until the assets are loaded. This is trivial while
+        //spritesheet is small, but when its bigger, this will matter
+        var tile_sheet = new Image();
+        //adding an event listener to the tile_sheet object. takes an event and then
+        //executes an action => defines custom event right here
+        tile_sheet.addEventListener("load", (event) => {
+          window.addEventListener("keydown", controller.keyListener);
+          window.addEventListener("keyup", controller.keyListener);
+          loop();
+        });
+        //BEGIN OF ACTUAL CODE. It runs this first and the listener does things
+        //once the assests are loaded
+        tile_sheet.src = "seansucksatart.png";
+
+      </script>
+
+  </body>
+</html>

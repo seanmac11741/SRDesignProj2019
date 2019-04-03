@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+
+<html>
+  <head>
+    <meta charset = "utf-8">
+    <meta name = "viewport" content = "width=device-witdh">
+
+    <title>Hayden's Demo</title>
+
+    <style>
+      *{margin:0, padding:0;}
+      html, body {background-color: #000000; height: 100%; position: relative; width: 100%;}
+      canvas{height: 100%; position: fixed; width: 100%;}
+    </style>
+  </head>
+
+  <body>
+    <canvas></canvas>
+
+      <script type = "text/javascript">
+      //got this from https://www.youtube.com/watch?v=jabYMh9sI8Q
+      //see if you guys can figure out how to use arrow keys instead of mouseclicks
+      //see if you can implement collisions using the collision function
+
+        const Player = function(x, y){
+          this.x = x, this.y=y;
+
+        };
+
+        Player.prototype = {
+          moveTo:function(x, y) {
+            this.x += (x -this.x -scaled_size *0.5) *0.05;
+            this.y += (y -this.y -scaled_size *0.5) *0.05;
+          }
+        };
+
+        const Viewport = function(x, y, w, h){
+          this.x = x; this.y =y; this.w = w; this.h = h;
+
+        };
+
+        Viewport.prototype = {
+
+          scrollTo:function(x, y){
+            this.x = x - this.w*0.5;
+            this.y = y -this.h *0.5;
+          }
+
+        };
+
+        collision = function(ax,ay,aw,ah,bx,by,bw,bh)
+        {
+            if(ax < bx+bw && ay <by+bh && bx <ax+aw && by<ay+ah){
+              return true;
+            }
+            else {
+              return false;
+            }
+        };
+
+        var scaled_size = 32;
+        var sprite_size = 16;
+        var columns = 24;
+        var rows = 24;
+        var map=[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+                 3,2,1,1,0,0,3,3,3,2,1,0,3,0,0,0,3,0,0,1,2,2,2,3,
+                 3,1,1,0,0,0,3,3,3,1,0,0,3,0,2,0,3,0,1,1,2,1,1,3,
+                 3,0,0,0,0,0,3,3,2,0,0,0,3,0,0,0,3,1,2,2,2,1,1,3,
+                 3,1,1,0,0,0,3,1,1,0,0,0,3,3,3,0,1,1,2,2,1,0,0,3,
+                 3,0,0,1,2,1,3,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,
+                 3,0,1,2,2,1,3,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1,0,3,
+                 3,0,0,1,1,1,3,1,1,1,0,1,0,0,0,3,0,0,3,3,3,0,0,3,
+                 3,0,0,0,1,1,3,3,3,3,3,3,3,3,3,3,0,0,3,3,3,3,3,3,
+                 3,3,0,3,3,3,3,3,3,3,3,1,0,0,0,3,0,0,3,3,3,2,1,3,
+                 3,3,1,0,0,1,3,3,3,3,3,0,0,0,0,0,0,1,1,0,1,1,0,3,
+                 3,3,3,3,1,1,3,3,3,3,3,1,0,0,0,0,1,1,2,2,1,0,0,3,
+                 3,3,3,3,0,1,0,0,3,3,1,0,0,1,1,2,1,2,0,1,2,1,0,3,
+                 3,2,3,0,0,0,1,0,1,1,0,0,1,0,0,2,1,2,2,1,2,1,1,3,
+                 3,1,1,1,0,0,0,0,1,1,0,0,0,1,1,0,2,1,1,1,2,0,1,3,
+                 3,1,1,1,1,1,0,1,3,3,1,0,0,0,1,1,1,2,2,2,1,1,2,3,
+                 3,0,0,0,1,0,1,1,3,3,1,0,0,0,0,1,0,1,1,1,1,1,1,3,
+                 3,1,1,0,0,0,0,3,3,3,1,1,2,2,0,0,3,3,3,3,3,3,3,3,
+                 3,0,1,0,1,0,1,3,3,3,3,2,2,2,2,1,3,1,0,0,0,0,1,3,
+                 3,1,0,0,0,1,3,3,3,2,1,0,1,2,0,1,0,0,0,1,1,0,0,3,
+                 3,2,0,0,0,0,3,3,3,3,1,1,0,1,1,0,3,0,1,2,2,1,0,3,
+                 3,3,1,0,1,1,3,3,3,3,3,3,0,0,1,1,3,0,0,1,1,0,0,3,
+                 3,3,1,1,2,3,3,3,3,3,3,3,1,0,1,2,3,1,0,0,0,0,1,3,
+                 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3];
+
+        var context = document.querySelector("canvas").getContext("2d");
+        var height = document.documentElement.clientHeight;
+        var width = document.documentElement.clientWidth;
+
+        var player = new Player(100, 100);
+        var viewport = new Viewport(200,200,300, 300);
+
+        var pointer = { x:0, y:0};
+
+        var time = 1;
+        var counter = 0;
+        var countX = 0;
+        var countY = 0;
+
+        function loop() {
+
+          window.requestAnimationFrame(loop);
+
+
+          var height = document.documentElement.clientHeight;
+          var width = document.documentElement.clientWidth;
+
+          context.canvas.height = height;
+          context.canvas.width = width;
+
+          context.imageSmoothingEnabled = false;
+
+          /* BOSS MOVEMENT */
+          /*
+          //Linear (up and down) movement
+          time = time + 1;
+          if (time < 50)
+          {
+            player.moveTo(0, 100);
+            viewport.scrollTo(player.x, player.y);
+          }
+          if (time > 50)
+          {
+            player.moveTo(0, -100);
+            viewport.scrollTo(player.x, player.y);
+          }
+          if (time == 100)
+          {
+            time = 0;
+          }
+          */
+
+          /*
+           * Circular movement
+           * Variables:
+           * r = radius of the circle
+           * origin = origin of the circle
+           * counter = speed (higher is slower)
+          */
+          counter = counter + 1;
+          var r = 40;
+          var origin = 200;
+          if (counter == 3)
+          {
+            //Increment time
+            time = time + 1;
+            //Calculate x and y position
+            xPosCirc = origin + toDegrees(Math.cos(time)) * r;
+            yPosCirc = origin + toDegrees(Math.sin(time)) * r;
+            //Move to new x and y
+            player.moveTo(xPosCirc, yPosCirc);
+
+            //Update viewport (not necessary for boss)
+            //viewport.scrollTo(player.x, player.y);
+
+            //Reset counter
+            counter = 0;
+          }
+          /* BOSS MOVEMENT */
+
+          var x_min = Math.floor(viewport.x / scaled_size);
+          var y_min = Math.floor(viewport.y / scaled_size);
+          var x_max = Math.ceil((viewport.x + viewport.w) / scaled_size);
+          var y_max = Math.ceil((viewport.y + viewport.h) / scaled_size);
+
+          if(x_min < 0){x_min =0;}
+          if(x_max > columns){x_max = columns;}
+          if(y_min < 0){y_min =0;}
+
+
+          for(let x = x_min; x<x_max; x++){
+            for(let y = y_min; y<y_max; y++){
+
+              let value = map[y*columns +x];
+              let tile_x = Math.floor(x * scaled_size - viewport.x + width*0.5 -viewport.w*0.5);
+              let tile_y = Math.floor(y * scaled_size - viewport.y + height*0.5 -viewport.h*0.5);
+              //math.floor removes lines between tiles while moving
+
+              context.drawImage(tile_sheet, value*sprite_size, 0, sprite_size, sprite_size,
+                tile_x, tile_y, scaled_size, scaled_size);
+
+            }
+          }
+
+          //bush stomping, also identifies where the player is at
+          let player_index= Math.floor((player.y + scaled_size * 0.5) / scaled_size) *columns +
+          Math.floor((player.x+scaled_size *0.5) / scaled_size);
+
+          if (map[player_index] ==2 ){
+            map[player_index] =1;
+          }
+
+
+          //params are source, start x position, start y pos, how far to go right, how far to go down,
+          //x cord, ycord, width, height
+          context.drawImage(tile_sheet, 64, 0, sprite_size, sprite_size,
+            Math.round(player.x - viewport.x + width*0.5 - viewport.w *0.5),
+            Math.round(player.y - viewport.y + height*0.5 -viewport.h *0.5),
+            scaled_size, scaled_size);
+
+          context.strokeStyle = "#ffffff";
+          context.rect(width*0.5 -viewport.w *0.5, height *0.5 -viewport.h*0.5, viewport.w, viewport.h);
+          context.stroke();
+
+        }
+        //load tilesheet, wait until the image is actually loaded to start the game loop
+        var tile_sheet = new Image();
+        tile_sheet.addEventListener("load", (event) => {
+          loop();
+        });
+
+        function toDegrees (angle) {
+          return angle * (180 / Math.PI);
+        }
+
+        tile_sheet.src = "sean-tile-scroll.png";
+
+        context.canvas.addEventListener("click", (event) => {
+          pointer.x = event.pageX + viewport.x -width *0.5 + viewport.w *0.5;
+          pointer.y = event.pageY + viewport.y -height *0.5+ viewport.h*0.5;
+        })
+
+    </script>
+
+  </body>
+</html>
