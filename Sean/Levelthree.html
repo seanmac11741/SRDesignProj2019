@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset = "utf-8">
+    <meta name = "template" content = "width=device_width">
+    <title>Goonsquadv2</title>
+
+    <style>
+      *{margin:0; padding:0;}
+
+      html, body {height:100%; width:100%; align-content:space-around;
+                  background-color: #202830; color:#ffffff; display: grid;
+                justify-content:center;}
+
+
+    </style>
+
+  </head>
+
+  <body>
+      <canvas></canvas>
+
+      <script type = "text/javascript">
+      //REMEMBER!!! core of any video game is this list, for every game loop:
+      //1. get input from user
+      //2. evaluate input
+      //3. display changes
+
+        //global vars can go here, this is the canvas that we write everything to
+        var context = document.querySelector("canvas").getContext("2d");
+        var current_mouse_pos = "0,0";
+        context.canvas.height = 640;
+        context.canvas.width = 640 ;
+        //if you comment this out, sprite images look like shit
+        context.imageSmoothingEnabled = false;
+        context.canvas.font = "30px Arial";
+
+        context.canvas.addEventListener('mousemove', function(evt) {
+          current_mouse_pos = getMousePos(context.canvas, evt);
+        });
+
+
+        //TILEMAP VARS AND FUNCTIONS
+        var scaled_size = 64; //HEIGHT
+        var sprite_size = 64; //WIDTH
+        var tilesheet_spritesize = 32;
+
+
+        //PLAYER OBJECT
+        var player = {
+          height:scaled_size,
+          width:scaled_size,
+          jumping:true,
+          x:7,
+          oldx:70,
+          x_velocity:0,
+          y:10,
+          oldy:600,
+          y_velocity:0,
+          charsheetx:255,
+          charsheety:71,
+
+          drawPlayer:function(x, y){
+            if(player.jumping){
+            context.drawImage(char_sheet,player.charsheetx+(player.width*7),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+            }
+            else{
+              //IF PLAYER IS (MOSTLY) STANDING STILL
+              if(player.x_velocity < 1 && player.x_velocity> -1){
+              context.drawImage(char_sheet,player.charsheetx+(player.width*0),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+              }
+              //IF PLAYER IS MOVING TO THE RIGHT
+              else if (player.x_velocity > 0) {
+                  if(loopcount>0 && loopcount<33){
+                    context.drawImage(char_sheet,player.charsheetx+(player.width*6),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                  }
+                  else if (loopcount>33 && loopcount<66) {
+                    context.drawImage(char_sheet,player.charsheetx+(player.width*5),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                  }
+                  else if (loopcount>66 && loopcount<100) {
+                    context.drawImage(char_sheet,player.charsheetx+(player.width*4),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                  }
+              }
+              else if (player.x_velocity < 0) {
+                if(loopcount>0 && loopcount<33){
+                  context.drawImage(char_sheet,player.charsheetx+(player.width*13),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                }
+                else if (loopcount>33 && loopcount<66) {
+                  context.drawImage(char_sheet,player.charsheetx+(player.width*11),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                }
+                else if (loopcount>66 && loopcount<100) {
+                  context.drawImage(char_sheet,player.charsheetx+(player.width*12),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                }
+              }
+            }
+          }
+        };
+
+        var enemy = {
+          height:scaled_size,
+          width:scaled_size,
+          x:1000,
+          oldx:70,
+          x_velocity:0.5,
+          y:512,
+          oldy:600,
+          y_velocity:0, //this dude doesn't jump
+          charsheetx:784,
+          charsheety:144,
+          charsheetw:44,
+          charsheeth:51,
+          leftbound: 1000,
+          rightbound: 1200,
+          spawn: false,
+          offset: 0,
+
+          drawEnemy:function(x, y){
+
+            //only draw if viewport is over where the enemy is allowed to be
+            //if(viewport.x + viewport.w > enemy.leftbound && viewport.x < enemy.rightbound)
+            //context.drawImage(char_sheet,enemy.charsheetx+(enemy.charsheetw*2),enemy.charsheety,enemy.charsheetw,enemy.charsheeth,
+            //x,y,scaled_size,scaled_size);
+
+              if(loopcount>0 && loopcount<33){
+                context.drawImage(char_sheet,enemy.charsheetx+(enemy.charsheetw*0),enemy.charsheety,enemy.charsheetw,enemy.charsheeth,
+                x,y,scaled_size,scaled_size);
+              }
+              else if (loopcount>33 && loopcount<66) {
+                context.drawImage(char_sheet,enemy.charsheetx+(enemy.charsheetw*1),enemy.charsheety,enemy.charsheetw,enemy.charsheeth,
+                x,y,scaled_size,scaled_size);
+              }
+              else if (loopcount>66 && loopcount<100) {
+                context.drawImage(char_sheet,enemy.charsheetx+(enemy.charsheetw*2),enemy.charsheety,enemy.charsheetw,enemy.charsheeth,
+                x,y,scaled_size,scaled_size);
+              }
+          },
+
+          physics:function(){
+            //if enemy is moving, keep it moving
+            if(enemy.x_velocity > 0) enemy.x_velocity += 0.5;
+            if(enemy.x_velocity < 0) enemy.x_velocity -= 0.5;
+
+            //enemy.x = enemy.leftbound - viewport.x;
+
+            enemy.x += enemy.x_velocity;
+            //force it to be on the floor
+            enemy.y =  640 - enemy.height-64;
+
+            //makes enemy go back left once it hits the rightbound WORKING
+            if(enemy.x + enemy.width > enemy.rightbound){
+              enemy.x = enemy.rightbound -enemy.width;
+              enemy.x_velocity = -0.5;
+            }
+
+            if(enemy.x < enemy.leftbound){
+              enemy.x = enemy.leftbound;
+              enemy.x_velocity = 0.5;
+            }
+            enemy.x_velocity *= 0.9;
+
+          }
+        };
+
+
+
+        //CONTROLLER VARS AND FUNCTIONS
+        var controller = {
+          left:false,
+          right:false,
+          up:false,
+            //defines a listener for the keys that performs a custom event when the
+            //listener is triggered
+            keyListener:function(event){
+              //this var sets the key state to either 1: pushing a key or 2: not pushing a key
+              var key_state = (event.type == "keydown")?true:false;
+
+              switch(event.keyCode){
+                case 65: //left arrow key
+                  controller.left = key_state;
+                break;
+                case 87: //up arrow key
+                  controller.up = key_state;
+                break;
+                case 68: //right arrow key
+                  controller.right = key_state;
+                break;
+                case 37: //left arrow key
+                  controller.left = key_state;
+                break;
+                case 38: //up arrow key
+                  controller.up = key_state;
+                break;
+                case 39: //right arrow key
+                  controller.right = key_state;
+                break;
+              }
+
+            }
+        };
+
+        //TILEMAP OBJECT
+        var tilemap = {
+          rows: 10,
+          columns:30,
+
+              map:[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0,
+                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
+                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
+                   2,2,2,5,2,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,0,
+                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
+                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
+                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
+                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
+                   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        };
+
+        //GENERIC COLLISION FUNCTION THAT I LOVE. Takes input of two objects and
+        //returns true if they are touching
+        collision = function(ax,ay,aw,ah,bx,by,bw,bh){
+            if(ax < bx+bw && ay < by+bh && bx < ax+aw && by < ay+ah){
+              return true;
+            }
+            else {
+              return false;
+            }
+        };
+
+
+        getMousePos = function(canvas, evt){
+          var rect = canvas.getBoundingClientRect();
+          var xmouse = Math.round(evt.clientX - rect.left);
+          var ymouse = Math.round(evt.clientY - rect.top);
+          return xmouse + "," + ymouse;
+        };
+
+        //VIEWPORT CLASS
+          var viewport = {
+            x:100,
+            y:0,
+            w:640,
+            h:640,
+          };
+
+        //IMPORTANT!!!! USE THIS SHIT TO SWITCH ANIMATIONS
+        var loopcount = 0;
+
+        function loop(){
+          if(loopcount> 100){
+            loopcount =1;
+          }
+
+          loopcount +=4.5;
+          var height = context.canvas.height;
+          var width = context.canvas.width;
+
+
+
+          //draw background, make the resolution based off of the browser window
+          context.fillStyle = "#2e4263";
+          context.fillRect(0,0,width,height);
+
+          //context.drawImage(title_sheet,0,0,width, height);
+
+
+          //TILEMAP BACKGROUND with VP vars
+          //first set viewport x value based on player location
+          //viewport.x = player.x;
+
+          //then set vars for the tilesheet
+          var x_min = Math.floor(viewport.x/scaled_size);
+          var y_min = 0; //only care about the x dimension for now
+          var x_max = Math.ceil((viewport.x +viewport.w)/scaled_size);
+          var y_max = Math.ceil((viewport.y + viewport.h) / scaled_size);
+
+          if(x_min < 0) x_min =0;
+          if(x_max > tilemap.columns) x_max = tilemap.columns;
+
+          for(let x = x_min; x < x_max; x++){
+            for(let y= y_min; y < y_max; y++){
+              //gets the array position of the current tile to write
+              let value = tilemap.map[y*tilemap.columns +x];
+              let tilex = x*scaled_size - viewport.x;
+              let tiley = y*scaled_size - viewport.y;
+
+              context.drawImage(tile_sheet, value*tilesheet_spritesize, 0,tilesheet_spritesize,tilesheet_spritesize,
+                tilex,tiley,scaled_size,scaled_size);
+            }
+          }
+
+          //draw some clickable buttons
+          //context.drawImage(buttons_sheet,95,317);
+          //draw a single button that you can touch
+          //context.drawImage(buttons_sheet,0,0,42,14,400,320,84,28);
+
+          //if the player hits the start button, go to index code
+          //if(collision(player.x, player.y, player.width, player.height,
+                    //   400, 320, 84, 28)){
+          //    window.location.href = 'indexv1.html';
+
+    //      };
+
+
+          //now that we have background, lets write our stupid terrible sprite to it
+          //how to draw from tilemap: https://www.w3schools.com/tags/canvas_drawimage.asp
+          //Clip the image and position the clipped part on the canvas:
+          //context.drawImage(img,sx,sy,swidth,sheight,x,y,width,height);
+          //this is how to draw the player, statically, who is at array position 4 in spritesheet
+          //context.drawImage(tile_sheet,sprite_size*4,0,sprite_size,sprite_size,canvas_x0,canvas_y0,scaled_size,scaled_size);
+
+          //after initializing everything, allow for input from user via listeners
+          //STARTS THE JUMP
+          if(controller.up && player.jumping == false){
+            player.y_velocity -= 40;
+            player.jumping = true;
+          }
+
+          if(controller.left){
+            player.x_velocity -= 0.8;
+          }
+
+          if(controller.right){
+            player.x_velocity += 0.8;
+          }
+
+
+
+
+          //PHYSICS!!!!!
+          player.y_velocity += 1.5; //gravity always add velocity each iteration (increase in v = gain in a)
+          player.y += player.y_velocity; //change y position based on velocity calced up to here
+          player.x += player.x_velocity;
+
+          //viewport velocity this moves the viewport and keeps the player in the same position
+          //on the canvas, while moving the viewport, giving the illusion of moving
+
+          //moving right and past the threshold for moving viewport, but not at max right viewport position
+          if(player.x > width/4 && player.x_velocity > 0 && viewport.x < (tilemap.columns*scaled_size) - viewport.w + width/4) {
+            viewport.x += player.x_velocity;
+            player.x -= player.x_velocity;
+          }
+
+          //once at rightmost viewport position, let player move to the right-most wall WORKING
+          if(viewport.x >= (tilemap.columns*scaled_size) - viewport.w && player.x_velocity>0 ) {
+            viewport.x = tilemap.columns*scaled_size - viewport.w;
+            player.x += player.x_velocity;
+          }
+
+          //when player is moving left WORKING
+          if(player.x> 0 && player.x<width/8 && player.x_velocity < 0 && viewport.x > 0){
+            viewport.x += player.x_velocity;
+            player.x -= player.x_velocity;
+          }
+
+          //I think this should be last for viewport stuffs, just the viewport collision
+          if(viewport.x < 0) viewport.x =0;
+          if(viewport.x > (tilemap.columns*scaled_size) - viewport.w){
+            viewport.x = tilemap.columns*scaled_size -viewport.w;
+          }
+
+          player.x_velocity *= 0.9;
+          player.y_velocity *= 0.9; //friction, makes sense in x... not in y...
+
+          //determine what enemies are on screen
+          if(viewport.x + viewport.w > enemy.leftbound && viewport.x + viewport.w < enemy.rightbound){
+            enemy.spawn = true;
+
+          }
+
+
+/* ----------------------------COLLISION SECTION -------------------------------- */
+          //evaluate collisions and make SMALL adjustments (like one pixel) to
+          //force the player to be non-collidable. Hardcode for now
+          if(player.y_velocity>0){
+            player.jumping = true;
+          }
+
+          //Screen collision on the left
+          if(player.x < 1){
+            player.x = 1;
+          }
+          //Screen collision on the right
+          if(player.x > width - player.width - scaled_size){
+            player.x = width - player.width - scaled_size-1;
+          }
+
+
+          //static collision detection for the floor
+          if(player.y + player.height > height-64){
+            player.jumping = false;
+            player.y =  height - player.height-64;
+            player.y_velocity = 0;
+          }
+
+          //static collision with win screen
+          if(collision(player.x, player.y, player.width, player.height,
+                       515, 515, 64, 64)){
+              window.alert("Congrats you won nothing");
+              window.location.href = 'indexv1.html';
+
+          };
+
+          //collision with baddie
+          if(collision(player.x, player.y, player.width, player.height,
+                       enemy.x - viewport.x, enemy.y, enemy.width, enemy.height)){
+              //window.alert("Haha you died dumbass xD");
+              window.location.href = 'Levelthree.html';
+
+          };
+
+
+/* ---------------------------- testing variables, remove eventually--------------- */
+          var current_cell = "enemy.x: "+ Math.round(enemy.x, 2) ;
+          //var current_cell = "superpos x and y: "+ superposx + "," + superposy;
+          context.fillText(current_cell, scaled_size,scaled_size+10);
+
+          //print current mouse position
+          context.fillText(current_mouse_pos, scaled_size,scaled_size+20);
+
+          //draw the player at the end of the physics calculations
+          player.drawPlayer(player.x, player.y);
+          player.oldx = player.x;
+          player.oldy = player.y;
+
+          //draw enemy(s)
+          enemy.physics();
+          enemy.drawEnemy(enemy.x - viewport.x, enemy.y);
+
+
+          window.requestAnimationFrame(loop);
+        };
+
+        //initialize game loop and it will go forever since it calls itself
+        //dont call the loop until the assets are loaded. This is trivial while
+        //spritesheet is small, but when its bigger, this will matter
+        var tile_sheet = new Image();
+        var char_sheet = new Image();
+        var title_sheet = new Image();
+        var buttons_sheet = new Image();
+        //adding an event listener to the tile_sheet object. takes an event and then
+        //executes an action => defines custom event right here
+        tile_sheet.addEventListener("load", (event) => {
+          window.addEventListener("keydown", controller.keyListener);
+          window.addEventListener("keyup", controller.keyListener);
+          loop();
+        });
+        //BEGIN OF ACTUAL CODE. It runs this first and the listener does things
+        //once the assests are loaded
+        tile_sheet.src = "sean_tiles.png";
+        char_sheet.src = "../Sprites/alpha demo.png";
+        title_sheet.src = '../Connor/thefix.png';
+        buttons_sheet.src = '../Connor/buttons.png';
+
+      </script>
+
+  </body>
+</html>
