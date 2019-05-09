@@ -47,8 +47,8 @@
 
         //PLAYER OBJECT
         var player = {
-          height:58,
-          width:64,
+          height:scaled_size,
+          width:scaled_size,
           jumping:true,
           x:7,
           oldx:70,
@@ -56,7 +56,7 @@
           y:10,
           oldy:600,
           y_velocity:0,
-          charsheetx:255,
+          charsheetx:244,
           charsheety:71,
 
           drawPlayer:function(x, y){
@@ -79,6 +79,9 @@
                   else if (loopcount>66 && loopcount<100) {
                     context.drawImage(char_sheet,player.charsheetx+(player.width*4),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
                   }
+                  else{
+                      context.drawImage(char_sheet,player.charsheetx+(player.width*6),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                  }
               }
               else if (player.x_velocity < 0) {
                 if(loopcount>0 && loopcount<33){
@@ -90,11 +93,17 @@
                 else if (loopcount>66 && loopcount<100) {
                   context.drawImage(char_sheet,player.charsheetx+(player.width*12),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
                 }
+                else{
+                    context.drawImage(char_sheet,player.charsheetx+(player.width*11),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                }
               }
+
             }
           }
         };
         //CONTROLLER VARS AND FUNCTIONS
+
+        var audio = new Audio('connor1.mp3');
         var controller = {
           left:false,
           right:false,
@@ -114,6 +123,11 @@
                 break;
                 case 68: //right arrow key
                   controller.right = key_state;
+
+                    if(audio.duration <= 0 || audio.paused){
+                    audio.play().then(() => console.log('We Playing'))
+                    .catch(err => console.log(`Error: ${err}`))
+                    }
                 break;
                 case 37: //left arrow key
                   controller.left = key_state;
@@ -190,7 +204,7 @@
           //draw a single button that you can touch
           context.drawImage(buttons_sheet,0,0,42,14,400,320,84,28);
           //setting button that you can touch to go to levelOne
-          context.drawImage(buttons_sheet,88,0,69,14,200,320,84,28);
+          //context.drawImage(buttons_sheet,88,0,69,14,200,320,84,28);
 
 
           //if the player hits the start button, go to Jonathans code
@@ -200,11 +214,11 @@
 
           };
 
-          if(collision(player.x, player.y, player.width, player.height,
+      /*    if(collision(player.x, player.y, player.width, player.height,
                        200,320,84,28)){
               window.location.href = 'LevelOne.html';
 
-          };
+          }; */
 
           //TILEMAP BACKGROUND
           /*
@@ -294,9 +308,9 @@
 
 
           //add static collision detection for the floor
-          if(player.y + player.height > height-100){
+          if(player.y + player.height > height-64){
             player.jumping = false;
-            player.y =  height - player.height-100;
+            player.y =  height - player.height-64;
             player.y_velocity = 0;
           }
 

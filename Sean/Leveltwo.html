@@ -57,7 +57,7 @@
           y:10,
           oldy:600,
           y_velocity:0,
-          charsheetx:255,
+          charsheetx:244,
           charsheety:71,
 
           drawPlayer:function(x, y){
@@ -80,6 +80,9 @@
                   else if (loopcount>66 && loopcount<100) {
                     context.drawImage(char_sheet,player.charsheetx+(player.width*4),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
                   }
+                  else{
+                      context.drawImage(char_sheet,player.charsheetx+(player.width*6),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                  }
               }
               else if (player.x_velocity < 0) {
                 if(loopcount>0 && loopcount<33){
@@ -91,15 +94,19 @@
                 else if (loopcount>66 && loopcount<100) {
                   context.drawImage(char_sheet,player.charsheetx+(player.width*12),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
                 }
+                else{
+                    context.drawImage(char_sheet,player.charsheetx+(player.width*11),player.charsheety,player.width,player.height,x,y,sprite_size,scaled_size);
+                }
               }
+
             }
           }
         };
 
 
 
-
         //CONTROLLER VARS AND FUNCTIONS
+        var audio = new Audio('connor1.mp3');
         var controller = {
           left:false,
           right:false,
@@ -119,6 +126,11 @@
                 break;
                 case 68: //right arrow key
                   controller.right = key_state;
+
+                    if(audio.duration <= 0 || audio.paused){
+                    audio.play().then(() => console.log('We Playing'))
+                    .catch(err => console.log(`Error: ${err}`))
+                    }
                 break;
                 case 37: //left arrow key
                   controller.left = key_state;

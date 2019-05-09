@@ -1,5 +1,7 @@
 # Website: 
   https://seanmac11741.github.io/SRDesignProj2019/
+  We had to host it on a different github repo because we don't have access to change the settings still.
+  
 # Group Name:
   Goonsquad
 

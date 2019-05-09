@@ -33,7 +33,7 @@
         context.canvas.width = 640 ;
         //if you comment this out, sprite images look like shit
         context.imageSmoothingEnabled = false;
-        context.canvas.font = "30px Arial";
+        context.font = "20px Arial";
 
         context.canvas.addEventListener('mousemove', function(evt) {
           current_mouse_pos = getMousePos(context.canvas, evt);
@@ -100,6 +100,32 @@
               }
 
             }
+          }
+        };
+
+        var pew = {
+          h:10,
+          w:50,
+          x:500,
+          y:500,
+          x_vel:0.8,
+          charsheetx:525,
+          charsheety:27,
+          charsheetw:50,
+          charsheeth:10,
+          spawn:false,
+
+          drawPew:function(){
+              context.drawImage(char_sheet,pew.charsheetx+(pew.charsheetw*0),pew.charsheety,pew.charsheetw,pew.charsheeth,
+              pew.x,pew.y,pew.w,pew.h);
+          },
+
+          pewphysics:function(){
+            //constant velocity, since it is flying
+            pew.x += pew.x_vel;
+
+            //if it hits the far right bound, despawn it
+            pew.spawn = false;
           }
         };
 
@@ -174,6 +200,7 @@
 
         //CONTROLLER VARS AND FUNCTIONS
         var audio = new Audio('connor1.mp3');
+        var wackaud = new Audio('wack.m4a');
         var controller = {
           left:false,
           right:false,
@@ -208,25 +235,43 @@
                 case 39: //right arrow key
                   controller.right = key_state;
                 break;
+                case 32:
+                  controller.space = key_state;
+
+                  wackaud.play().then(() => console.log('wack'))
+                  .catch(err => console.log(`Error: ${err}`))
+                break;
               }
 
             }
         };
+
         //TILEMAP OBJECT
         var tilemap = {
           rows: 10,
-          columns:30,
+          columns:40,
+//when using All_Sprites.png from my directory, remember these rules
+// 2 and 3 go together always
+// 7 and 8 go above 2 and 3 always
+//0 is ground
+//1 is floor
+//4 is water fountain
+//5 is wastebasket
+//6 is brick wall
+//9 is firealarm
+// 10 is ceiling
+// 11 is shit
 
-              map:[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0,
-                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
-                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
-                   2,2,2,5,2,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,2,2,5,2,2,2,2,2,2,0,
-                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
-                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
-                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
-                   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,
-                   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,0,
-                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+              map:[10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,0,
+                   0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,11,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,11,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,11,11,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,6,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,6,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,6,6,6,7,8,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,9,0,
+                   0,1,1,1,1,2,3,1,1,1,1,4,1,1,1,1,5,1,1,1,1,4,1,1,1,1,1,5,1,1,1,1,1,1,1,1,1,1,1,0,
+                   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
         };
 
         //GENERIC COLLISION FUNCTION THAT I LOVE. Takes input of two objects and
@@ -337,6 +382,12 @@
             player.x_velocity += 0.8;
           }
 
+          if(controller.space){
+            pew.spawn = true;
+            pew.x = player.x + player.width;
+            pew.y = player.y + (player.height * 0.5);
+          }
+
 
 
 
@@ -375,11 +426,7 @@
           player.x_velocity *= 0.9;
           player.y_velocity *= 0.9; //friction, makes sense in x... not in y...
 
-          //determine what enemies are on screen
-          if(viewport.x + viewport.w > enemy.leftbound && viewport.x + viewport.w < enemy.rightbound){
-            enemy.spawn = true;
 
-          }
 
 
 /* ----------------------------COLLISION SECTION -------------------------------- */
@@ -410,38 +457,65 @@
           if(collision(player.x, player.y, player.width, player.height,
                        515, 515, 64, 64)){
               //window.alert("Congrats you won nothing");
-              window.location.href = 'Levelfour.html';
+              window.location.href = 'Ward_Intro.html';
 
           };
 
+          if(enemy.spawn == true){
           //collision with baddie
-          if(collision(player.x, player.y, player.width, player.height,
-                       enemy.x - viewport.x, enemy.y, enemy.width, enemy.height)){
-              //window.alert("Haha you died dumbass xD");
-              window.location.href = 'Levelthree.html';
+            if(collision(player.x, player.y, player.width, player.height,
+                         enemy.x - viewport.x, enemy.y, enemy.width, enemy.height)){
+                //window.alert("Haha you died dumbass xD");
+                window.location.href = 'Levelfour.html';
 
-          };
+            };
+          }
 
 
 /* ---------------------------- testing variables, remove eventually--------------- */
           var current_cell = "enemy.x: "+ Math.round(enemy.x, 2) ;
           //var current_cell = "superpos x and y: "+ superposx + "," + superposy;
-          context.fillText(current_cell, scaled_size,scaled_size+10);
+          //context.fillText(current_cell, scaled_size,scaled_size+10);
 
           //print current mouse position
-          context.fillText(current_mouse_pos, scaled_size,scaled_size+20);
+          //context.fillText(current_mouse_pos, scaled_size,scaled_size+20);
+
+          //draw instructions!
+          context.fillText("Press space to hit stuff!", 350 - viewport.x,250);
 
           //draw the player at the end of the physics calculations
           player.drawPlayer(player.x, player.y);
           player.oldx = player.x;
           player.oldy = player.y;
 
+        if(enemy.spawn == true){
           //draw enemy(s)
           enemy.physics();
           enemy.drawEnemy(enemy.x - viewport.x, enemy.y);
+        }
 
+        if(pew.spawn ==true){
+          //pew.pewphysics();
+          pew.drawPew();
+          //if you hit the enemy, despawn it
+            if( collision(pew.x, pew.y, pew.w, pew.h, (enemy.x - viewport.x), enemy.y, enemy.width, enemy.height) ){
+              enemy.spawn = false;
+
+              //only respawn the enemy at 2nd location if it is at initial location
+                if(enemy.leftbound< 1800){
+                  enemy.leftbound = 1800;
+                  enemy.rightbound = 2000;
+                  enemy.spawn = true;
+                }
+            }
+
+            //pew only exists if you hold down space
+            pew.spawn = false;
+
+        }
 
           window.requestAnimationFrame(loop);
+          //main loop end
         };
 
         //initialize game loop and it will go forever since it calls itself
@@ -460,7 +534,7 @@
         });
         //BEGIN OF ACTUAL CODE. It runs this first and the listener does things
         //once the assests are loaded
-        tile_sheet.src = "sean_tiles.png";
+        tile_sheet.src = "All_Sprites.png";
         char_sheet.src = "../Sprites/alpha demo.png";
         title_sheet.src = '../Connor/thefix.png';
         buttons_sheet.src = '../Connor/buttons.png';

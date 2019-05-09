@@ -55,7 +55,7 @@
                   y:10,
                   oldy:600,
                   y_velocity:0,
-                  charsheetx:255,
+                  charsheetx:244,
                   charsheety:71,
 
                   drawPlayer:function(x, y){
@@ -94,6 +94,7 @@
                   }
                 };
         //CONTROLLER VARS AND FUNCTIONS
+        var audio = new Audio('connor1.mp3');
         var controller = {
           left:false,
           right:false,
@@ -112,6 +113,20 @@
                   controller.up = key_state;
                 break;
                 case 68: //right arrow key
+                  controller.right = key_state;
+
+                    if(audio.duration <= 0 || audio.paused){
+                    audio.play().then(() => console.log('We Playing'))
+                    .catch(err => console.log(`Error: ${err}`))
+                    }
+                break;
+                case 37: //left arrow key
+                  controller.left = key_state;
+                break;
+                case 38: //up arrow key
+                  controller.up = key_state;
+                break;
+                case 39: //right arrow key
                   controller.right = key_state;
                 break;
               }
