@@ -29,7 +29,6 @@
         //global vars can go here, this is the canvas that we write everything to
         var context = document.querySelector("canvas").getContext("2d");
         var current_mouse_pos = "0,0";
-	var playing = false;
         context.canvas.height = 640;
         context.canvas.width = 640 ;
         //if you comment this out, sprite images look like shit
@@ -39,10 +38,6 @@
         context.canvas.addEventListener('mousemove', function(evt) {
           current_mouse_pos = getMousePos(context.canvas, evt);
         });
-
-	function next(){
-		window.location.href = 'Levelfive.html';
-	}
 
 
         //TILEMAP VARS AND FUNCTIONS
@@ -57,13 +52,43 @@
           width:scaled_size,
           jumping:true,
           x:7,
-          oldx:70,
           x_velocity:0,
           y:10,
-          oldy:600,
           y_velocity:0,
           charsheetx:244,
           charsheety:71,
+
+          physics:function(){
+
+                      //PHYSICS!!!!!
+                      player.y_velocity += 1.5; //gravity always add velocity each iteration (increase in v = gain in a)
+                      player.y += player.y_velocity; //change y position based on velocity calced up to here
+                      player.x += player.x_velocity;
+
+                      player.x_velocity *= 0.9;
+                      player.y_velocity *= 0.9; //friction, makes sense in x... not in y...
+
+                      if(player.y_velocity>0){
+                        player.jumping = true;
+                      }
+
+                      //Screen collision on the left
+                      if(player.x < 1){
+                        player.x = 1;
+                      }
+                      //Screen collision on the right
+                      if(player.x > context.canvas.width - player.width - scaled_size){
+                        player.x = context.canvas.width - player.width - scaled_size-1;
+                      }
+
+
+                      //static collision detection for the floor
+                      if(player.y + player.height > context.canvas.height-64){
+                        player.jumping = false;
+                        player.y =  context.canvas.height - player.height-64;
+                        player.y_velocity = 0;
+                      }
+          },
 
           drawPlayer:function(x, y){
             if(player.jumping){
@@ -135,13 +160,11 @@
         };
 
         var enemy = {
-          height:scaled_size,
-          width:scaled_size,
+          height:scaled_size*2,
+          width:scaled_size*2,
           x:1000,
-          oldx:70,
           x_velocity:0.5,
           y:512,
-          oldy:600,
           y_velocity:0, //this dude doesn't jump
           charsheetx:784,
           charsheety:144,
@@ -161,19 +184,19 @@
 
               if(loopcount>0 && loopcount<33){
                 context.drawImage(char_sheet,enemy.charsheetx+(enemy.charsheetw*0),enemy.charsheety,enemy.charsheetw,enemy.charsheeth,
-                x,y,scaled_size,scaled_size);
+                x,y,enemy.height,enemy.width);
               }
               else if (loopcount>33 && loopcount<66) {
                 context.drawImage(char_sheet,enemy.charsheetx+(enemy.charsheetw*1),enemy.charsheety,enemy.charsheetw,enemy.charsheeth,
-                x,y,scaled_size,scaled_size);
+                x,y,enemy.height,enemy.width);
               }
               else if (loopcount>66 && loopcount<100) {
                 context.drawImage(char_sheet,enemy.charsheetx+(enemy.charsheetw*2),enemy.charsheety,enemy.charsheetw,enemy.charsheeth,
-                x,y,scaled_size,scaled_size);
+                x,y,enemy.height,enemy.width);
               }
               else{
                 context.drawImage(char_sheet,enemy.charsheetx+(enemy.charsheetw*2),enemy.charsheety,enemy.charsheetw,enemy.charsheeth,
-                x,y,scaled_size,scaled_size);
+                x,y,enemy.height,enemy.width);
               }
           },
 
@@ -205,18 +228,19 @@
 
         var boss = {
           h:scaled_size*2,
-          w:scaled_size*1.5,
+          w:scaled_size*3,
           x:1550,
-          x_velocity:0.5,
+          x_velocity:2,
           y:640-scaled_size*2,
-          y_vel:0, //this dude doesn't jump
-          charsheetx:320,
-          charsheety:144,
-          charsheetw:64,
-          charsheeth:86,
-          leftbound: 1500,
-          rightbound: 2000,
+          y_velocity:0, //this dude doesn't jump lol jk now he does
+          charsheetx:256,
+          charsheety:412,
+          charsheetw:48,
+          charsheeth:52,
+          leftbound: 0,
+          rightbound: 3200,
           spawn: true,
+          jumping: false,
 
           drawBoss:function(x, y){
 
@@ -245,14 +269,20 @@
 
           physics:function(){
             //if enemy is moving, keep it moving
-            if(boss.x_velocity > 0) boss.x_velocity += 0.5;
-            if(boss.x_velocity < 0) boss.x_velocity -= 0.5;
+            if(boss.x_velocity > 0) boss.x_velocity += 1.5;
+            if(boss.x_velocity < 0) boss.x_velocity -= 1.5;
 
             //enemy.x = enemy.leftbound - viewport.x;
+            if(boss.y_velocity>0){
+              boss.jumping = true;
+            }
 
+            //gravity, duh
+            boss.y_velocity += 1.5;
             boss.x += boss.x_velocity;
+            boss.y += boss.y_velocity;
             //force it to be on the floor
-            boss.y =  640 - boss.h;
+            //boss.y =  640 - boss.h - scaled_size;
 
             //window.localstore, remember this
 
@@ -268,18 +298,88 @@
             }
             //friction
             boss.x_velocity *= 0.9;
+            boss.y_velocity *= 0.9;
+
+            //static collision detection for the floor
+            if(boss.y + boss.h > context.canvas.height-scaled_size){
+              boss.jumping = false;
+              boss.y =  context.canvas.height - boss.h-scaled_size;
+              boss.y_velocity = 0;
+            }
+
+            //add some RNG to make the boss jump occasionally
+            var rjump = Math.floor(Math.random() * 30);
+            if(rjump ==2 && boss.jumping == false){
+              console.log('Boss jumped');
+              boss.y_velocity -= 40;
+              boss.jumping = true;
+              // if(boss.x - viewport.x > 0 && boss.x - viewport.x < 640)
+              hua.play().then(() => console.log('wack'))
+              .catch(err => console.log(`Error: ${err}`))
+            }
 
           }
         };
 
+        var healthbar = {
+          total:5,
+          basew:32,
+          hpw:32,
+          hph:32,
+          hpspritex:592,
+          hpspritey:16,
+          basespritew:18,
+          hpspritew:18,
+          hpspriteh:16,
 
+          drawhpbar:function(x,y){
+            //draw the HP bar based on current hp from the localStorage
+            //first get the hp value and update it
+            healthbar.total = localStorage.getItem('HP');
+
+//            context.drawImage(char_sheet,healthbar.hpspritex+(healthbar.hpspritew*0),healthbar.hpspritey,healthbar.hpspritew,healthbar.hpspriteh,x,y,healthbar.hpw,healthbar.hph);
+
+            if(healthbar.total == "5"){
+                  healthbar.hpw = 5*healthbar.basew;
+                  healthbar.hpspritew = 5*healthbar.basespritew;
+                  context.drawImage(char_sheet,healthbar.hpspritex,healthbar.hpspritey,healthbar.hpspritew,healthbar.hpspriteh,
+                  x,y,healthbar.hpw,healthbar.hph);
+            }
+            else if(healthbar.total == "4"){
+              healthbar.hpw = 4*healthbar.basew;
+              healthbar.hpspritew = 4*healthbar.basespritew;
+              context.drawImage(char_sheet,healthbar.hpspritex,healthbar.hpspritey,healthbar.hpspritew,healthbar.hpspriteh,
+              x,y,healthbar.hpw,healthbar.hph);
+            }
+            else if(healthbar.total == "3"){
+              healthbar.hpw = 3*healthbar.basew;
+              healthbar.hpspritew = 3*healthbar.basespritew;
+              context.drawImage(char_sheet,healthbar.hpspritex,healthbar.hpspritey,healthbar.hpspritew,healthbar.hpspriteh,
+              x,y,healthbar.hpw,healthbar.hph);
+            }
+            else if(healthbar.total == "2"){
+              healthbar.hpw = 2*healthbar.basew;
+              healthbar.hpspritew = 2*healthbar.basespritew;
+              context.drawImage(char_sheet,healthbar.hpspritex,healthbar.hpspritey,healthbar.hpspritew,healthbar.hpspriteh,
+              x,y,healthbar.hpw,healthbar.hph);
+            }
+            else if(healthbar.total == "1"){
+              healthbar.hpw = 1*healthbar.basew;
+              healthbar.hpspritew = 1*healthbar.basespritew;
+              context.drawImage(char_sheet,healthbar.hpspritex,healthbar.hpspritey,healthbar.hpspritew,healthbar.hpspriteh,
+              x,y,healthbar.hpw,healthbar.hph);
+            }
+          }
+        };
 
         //CONTROLLER VARS AND FUNCTIONS
+        var audio = new Audio('connor1.mp3');
+        var wackaud = new Audio('wack.m4a');
+        var hua = new Audio('HUA.m4a');
         var controller = {
           left:false,
           right:false,
           up:false,
-          space:false,
             //defines a listener for the keys that performs a custom event when the
             //listener is triggered
             keyListener:function(event){
@@ -288,32 +388,33 @@
 
               switch(event.keyCode){
                 case 65: //left arrow key
-                  //controller.left = key_state;
+                  controller.left = key_state;
                 break;
                 case 87: //up arrow key
-                  //controller.up = key_state;
+                  controller.up = key_state;
                 break;
                 case 68: //right arrow key
-                  //controller.right = key_state;
-                  var audio = new Audio('Theme.mp3');
+                  controller.right = key_state;
 
-                    if(playing == false){
+                    if(audio.duration <= 0 || audio.paused){
                     audio.play().then(() => console.log('We Playing'))
                     .catch(err => console.log(`Error: ${err}`))
-		                    playing = true;
                     }
                 break;
                 case 37: //left arrow key
-                  //controller.left = key_state;
+                  controller.left = key_state;
                 break;
                 case 38: //up arrow key
-                  //controller.up = key_state;
+                  controller.up = key_state;
                 break;
                 case 39: //right arrow key
-                  //controller.right = key_state;
+                  controller.right = key_state;
                 break;
                 case 32:
-                  //controller.space = key_state;
+                  controller.space = key_state;
+
+                  wackaud.play().then(() => console.log('wack'))
+                  .catch(err => console.log(`Error: ${err}`))
                 break;
               }
 
@@ -339,10 +440,10 @@
               map:[10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,0,
                    0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
                    0,6,6,11,11,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
-                   0,6,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
-                   0,6,6,11,11,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
                    0,6,6,6,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
-                   0,6,6,11,11,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,6,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,6,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
+                   0,6,6,6,11,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,
                    0,6,6,6,6,7,8,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,9,6,6,6,6,6,6,6,6,6,6,0,
                    0,1,1,1,1,2,3,1,1,1,1,4,1,1,1,1,5,1,1,1,1,4,1,1,1,1,1,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,5,0,
                    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
@@ -356,6 +457,29 @@
             }
             else {
               return false;
+            }
+        };
+
+        //pain function that hurts the player. This will happen quite alot on level 6 lmao
+        pain = function(){
+            //this decreases HP by one and kills you and resets if HP is 0
+            var temp33 = localStorage.getItem('HP');
+            temp33 = temp33-1;
+            if(temp33 == "0"){
+              //localStorage.clear();
+              //localStorage.setItem("HP","5");
+              window.alert("Haha you died dumbass xD");
+              window.location.href = 'indexv1.html';
+            }
+            else{
+              localStorage.setItem("HP", temp33);
+              player.x = 7;
+              player.y = 10;
+              viewport.x = 0;
+              viewport.y = 0;
+
+              boss.x = 1200;
+              //window.location.href = 'Levelseven.html';
             }
         };
 
@@ -378,8 +502,6 @@
         //IMPORTANT!!!! USE THIS SHIT TO SWITCH ANIMATIONS
         var loopcount = 0;
 
-
-
         function loop(){
           if(loopcount> 100){
             loopcount =1;
@@ -388,8 +510,6 @@
           loopcount +=4.5;
           var height = context.canvas.height;
           var width = context.canvas.width;
-
-
 
           //draw background, make the resolution based off of the browser window
           context.fillStyle = "#2e4263";
@@ -411,7 +531,17 @@
           if(x_min < 0) x_min =0;
           if(x_max > tilemap.columns) x_max = tilemap.columns;
 
-          context.drawImage(intro,80,48,64,38,0,0,640,640);
+          for(let x = x_min; x < x_max; x++){
+            for(let y= y_min; y < y_max; y++){
+              //gets the array position of the current tile to write
+              let value = tilemap.map[y*tilemap.columns +x];
+              let tilex = x*scaled_size - viewport.x;
+              let tiley = y*scaled_size - viewport.y;
+
+              context.drawImage(tile_sheet, value*tilesheet_spritesize, 0,tilesheet_spritesize,tilesheet_spritesize,
+                tilex,tiley,scaled_size,scaled_size);
+            }
+          }
 
 
 
@@ -436,14 +566,6 @@
             pew.y = player.y + (player.height * 0.5);
           }
 
-
-
-
-          //PHYSICS!!!!!
-          player.y_velocity += 1.5; //gravity always add velocity each iteration (increase in v = gain in a)
-          player.y += player.y_velocity; //change y position based on velocity calced up to here
-          player.x += player.x_velocity;
-
           //viewport velocity this moves the viewport and keeps the player in the same position
           //on the canvas, while moving the viewport, giving the illusion of moving
 
@@ -453,13 +575,13 @@
             player.x -= player.x_velocity;
           }
 
-          //once at rightmost viewport position, let player move to the right-most wall WORKING
+          //once at rightmost viewport position, let player move to the right-most wall
           if(viewport.x >= (tilemap.columns*scaled_size) - viewport.w && player.x_velocity>0 ) {
             viewport.x = tilemap.columns*scaled_size - viewport.w;
             player.x += player.x_velocity;
           }
 
-          //when player is moving left WORKING
+          //when player is moving left
           if(player.x> 0 && player.x<width/8 && player.x_velocity < 0 && viewport.x > 0){
             viewport.x += player.x_velocity;
             player.x -= player.x_velocity;
@@ -471,41 +593,18 @@
             viewport.x = tilemap.columns*scaled_size -viewport.w;
           }
 
-          player.x_velocity *= 0.9;
-          player.y_velocity *= 0.9; //friction, makes sense in x... not in y...
-
-
 
 
 /* ----------------------------COLLISION SECTION -------------------------------- */
           //evaluate collisions and make SMALL adjustments (like one pixel) to
           //force the player to be non-collidable. Hardcode for now
-          if(player.y_velocity>0){
-            player.jumping = true;
-          }
 
-          //Screen collision on the left
-          if(player.x < 1){
-            player.x = 1;
-          }
-          //Screen collision on the right
-          if(player.x > width - player.width - scaled_size){
-            player.x = width - player.width - scaled_size-1;
-          }
-
-
-          //static collision detection for the floor
-          if(player.y + player.height > height-64){
-            player.jumping = false;
-            player.y =  height - player.height-64;
-            player.y_velocity = 0;
-          }
 
           //static collision with win screen
           if(collision(player.x, player.y, player.width, player.height,
                        515, 515, 64, 64)){
-            //  window.alert("Congrats you won nothing");
-              window.location.href = 'Levelsix.html';
+              window.alert("Congrats you won nothing");
+              window.location.href = 'indexv1.html';
 
           };
 
@@ -514,8 +613,7 @@
             if(collision(player.x, player.y, player.width, player.height,
                          enemy.x - viewport.x, enemy.y, enemy.width, enemy.height)){
                 //window.alert("Haha you died dumbass xD");
-                window.location.href = 'Levelfive.html';
-
+                pain();
             };
           }
 
@@ -523,29 +621,29 @@
           if(boss.spawn ==true){
             if(collision(player.x, player.y, player.width, player.height,
                           boss.x - viewport.x, boss.y, boss.w, boss.h)){
-              window.location.href = 'Levelfive.html';
+              pain();
+
             }
           };
 
 
 /* ---------------------------- testing variables, remove eventually--------------- */
           //var current_cell = "Boss.y: "+ Math.round(boss.y, 2) ;
-          //adding variable to grab hp bar from the thing
-          //if(localStorage.getItem("HP") == null) localStorage.setItem("HP", "10");
+          //create HP object if its not there already
+          if(localStorage.getItem("HP") == null) localStorage.setItem("HP", "5");
 
-          //var current_cell = "HP: "+ hpBar;
+          var current_cell = "Viewport.x "+ Math.round(viewport.x,2);
           //context.fillText(current_cell, scaled_size,scaled_size+10);
 
           //print current mouse position
           //context.fillText(current_mouse_pos, scaled_size,scaled_size+20);
 
           //draw instructions!
-          context.fillText("Ward has challenged you!", 425 - viewport.x,175);
+          context.fillText("You have 5 lives, don't lose them all!", 400 - viewport.x,250);
 
           //draw the player at the end of the physics calculations
+          player.physics();
           player.drawPlayer(player.x, player.y);
-          player.oldx = player.x;
-          player.oldy = player.y;
 
         if(enemy.spawn == true){
           //draw enemy(s)
@@ -576,12 +674,21 @@
                 }
             }
 
+            //if you hit the boss, make them jump
+            if(collision(pew.x, pew.y, pew.w, pew.h, (boss.x -viewport.x), boss.y, boss.w, boss.h)){
+              console.log('Boss stab jumped');
+              boss.y_velocity -= 60;
+              boss.jumping = true;
+            }
+
             //pew only exists if you hold down space
             pew.spawn = false;
 
         }
 
-setTimeout(next,5000)
+        healthbar.drawhpbar(0,0);
+
+
 
           window.requestAnimationFrame(loop);
           //main loop end
@@ -594,13 +701,13 @@ setTimeout(next,5000)
         var char_sheet = new Image();
         var title_sheet = new Image();
         var buttons_sheet = new Image();
-	var intro = new Image();
         //adding an event listener to the tile_sheet object. takes an event and then
         //executes an action => defines custom event right here
         tile_sheet.addEventListener("load", (event) => {
           window.addEventListener("keydown", controller.keyListener);
           window.addEventListener("keyup", controller.keyListener);
           //localStorage.setItem("HP", "10");
+          localStorage.setItem("HP", "5");
           loop();
         });
         //BEGIN OF ACTUAL CODE. It runs this first and the listener does things
@@ -609,7 +716,7 @@ setTimeout(next,5000)
         char_sheet.src = "../Sprites/alpha demo.png";
         title_sheet.src = '../Connor/thefix.png';
         buttons_sheet.src = '../Connor/buttons.png';
-	intro.src = "../Sprites/Boss_intros.png";
+
       </script>
 
   </body>
